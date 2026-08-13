@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Question about how the loop works
+    url: https://github.com/nextbaires/expert-loop/discussions
+    about: Ask before filing — how proposals are reviewed, what gets accepted, how credit works.

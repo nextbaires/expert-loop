@@ -1,0 +1,7 @@
+# Every merge needs a human. The loop can open pull requests; it cannot approve them.
+*                       @nextbaires
+
+# The trust boundary itself. Changes here need extra scrutiny — a change to the
+# workflow or the prompt changes what every consuming repository will execute.
+/.github/workflows/     @nextbaires
+/.github/CODEOWNERS     @nextbaires
