@@ -63,7 +63,10 @@ issue form, the drafting prompt, the permission boundary, and the review discipl
 
 1. Copy [`examples/consumer-workflow.yml`](examples/consumer-workflow.yml) to
    `.github/workflows/expert-loop.yml` and set `domain`, `allowed-paths`, and
-   `test-command`.
+   `test-command`. **Keep its `permissions:` block.** Most repositories issue a
+   read-only `GITHUB_TOKEN` by default, a called workflow cannot request more than
+   its caller holds, and the resulting failure happens at startup — no job, no log,
+   and an error message that does not say which permission was missing.
 2. Copy [`.github/ISSUE_TEMPLATE/proposal.yml`](.github/ISSUE_TEMPLATE/proposal.yml) into
    your repository and rewrite the placeholder examples for your field. Do rewrite them —
    a form whose examples come from someone else's discipline reads as boilerplate and gets

@@ -14,6 +14,19 @@ on:
   issues:
     types: [labeled]
 
+# Do not delete this block. GitHub's default GITHUB_TOKEN is read-only on most
+# repositories, and a reusable workflow cannot request more permission than the
+# workflow calling it holds. Without these three scopes the run fails at startup
+# — before the label gate is evaluated, with no job, no step and no log, and an
+# error that does not name the cause. Granting them here keeps the rest of your
+# workflows on the read-only default, which is why this is better than flipping
+# the repository-wide setting to read/write.
+permissions:
+  contents: write # push the proposal branch
+  pull-requests: write # open and label the pull request
+  issues: write # comment back on the proposal
+  id-token: write # claude-code-action swaps this for a GitHub App token
+
 jobs:
   draft:
     # Only the gate label, and only on proposals.

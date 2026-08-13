@@ -86,6 +86,16 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
+  # claude-code-action exchanges a workflow OIDC token for a GitHub App
+  # installation token, so it needs this even though nothing here signs or
+  # attests anything. Without it the action retries three times and dies with
+  # "Unable to get ACTIONS_ID_TOKEN_REQUEST_URL".
+  #
+  # The app token is also what makes the drafted pull request trigger CI. A pull
+  # request opened with the plain GITHUB_TOKEN does not start workflow runs, so
+  # the reviewer would be handed an untested branch — the one thing this loop
+  # cannot afford. This is why the action is not simply pointed at github.token.
+  id-token: write
 
 jobs:
   # Cheap gate. Reads the proposal and enough of the repository to judge whether
