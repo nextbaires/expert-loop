@@ -28,5 +28,17 @@ jobs:
       # claude-opus-5 is the default. Switch to claude-sonnet-5 for mechanical changes.
       model: claude-opus-5
       max-turns: 40
+      # A cheap Haiku pass decides whether the proposal is actionable before the
+      # expensive drafting run reads your whole codebase. Leave this on.
+      triage: true
     secrets:
-      anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+      # Pick ONE.
+      #
+      # Subscription (recommended): no per-token charge, drawn against your Claude
+      # plan's limits instead. Generate the token with `claude setup-token` and add
+      # it as a repository secret.
+      claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      #
+      # Pay per token: use this instead if you have no Claude subscription, or if
+      # you want this loop's spend to appear separately on an API bill.
+      # anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}

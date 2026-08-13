@@ -37,10 +37,16 @@ Expert files an issue
 Maintainer reads it, applies `approved-for-drafting`   ← human gate #1
         │
         ▼
-Workflow runs Claude against the repository
+Triage — a small model reads the proposal, not the codebase
+        │
+        ├── vague, out of scope, or not a proposal?
+        │     → asks the one blocking question, removes the label, stops
+        │       (costs about a cent; no expensive run happens)
+        ▼
+Drafting — Claude works against the repository
   reads conventions → implements → writes a test → cites every claim
         │
-        ├── ambiguous or out of scope? → asks on the issue, opens nothing
+        ├── blocked mid-way? → asks on the issue, opens nothing
         │
         ▼
 Pull request, labelled `needs-domain-review`
@@ -62,7 +68,8 @@ issue form, the drafting prompt, the permission boundary, and the review discipl
    your repository and rewrite the placeholder examples for your field. Do rewrite them —
    a form whose examples come from someone else's discipline reads as boilerplate and gets
    filled in badly.
-3. Add an `ANTHROPIC_API_KEY` repository secret.
+3. Add a `CLAUDE_CODE_OAUTH_TOKEN` repository secret (`claude setup-token`), or an
+   `ANTHROPIC_API_KEY` if you would rather pay per token.
 4. Create the labels `proposal`, `approved-for-drafting`, and `needs-domain-review`.
 5. Add a `CODEOWNERS` file and turn on branch protection requiring review. Without this,
    gate #2 does not exist.
@@ -77,22 +84,43 @@ drafting instructions; it takes precedence over the built-in prompt.
 | `domain` | *required* | Sets the assistant's frame, e.g. `seismology` |
 | `allowed-paths` | *required* | Space-separated. Everything else is off limits |
 | `test-command` | `""` | Must pass before a pull request opens |
-| `model` | `claude-opus-5` | See cost, below |
+| `model` | `claude-opus-5` | Drafting model. See cost, below |
 | `max-turns` | `40` | The main cost ceiling |
+| `triage` | `true` | Cheap feasibility check before the expensive run |
+| `triage-model` | `claude-haiku-4-5` | Model for that check |
 | `contribution-guide` | `.github/expert-loop/CONTRIBUTING-DRAFT.md` | Optional, repo-specific |
 
-Secret: `anthropic-api-key`.
+Secrets — supply exactly one:
 
-### Cost
+| Secret | Billing |
+|---|---|
+| `claude-code-oauth-token` | Your Claude subscription. **No per-token charge.** Generate with `claude setup-token` |
+| `anthropic-api-key` | Pay per token |
+
+## Cost
+
+**If you have a Claude subscription, use `claude-code-oauth-token` and there is no
+per-token bill at all** — runs draw against your plan's limits instead. This is the
+right default for most people. Use the API key when you have no subscription, or when
+you specifically want this loop's spend itemised separately.
+
+If you are paying per token:
 
 | Model | Input / output per MTok | Use for |
 |---|---|---|
-| `claude-opus-5` | $5 / $25 | Proposals needing real judgement — the default |
+| `claude-opus-5` | $5 / $25 | Proposals needing real judgement — the drafting default |
 | `claude-sonnet-5` | $3 / $15 ($2 / $10 through 2026-08-31) | Mechanical, well-specified changes |
+| `claude-haiku-4-5` | $1 / $5 | The triage pass |
 
-Cost per proposal is driven by how much of the repository the assistant has to read, so it
-scales with repository size more than with proposal length. `max-turns` is the ceiling that
-actually bounds a runaway run; set it deliberately rather than raising it reflexively.
+**Cost is dominated by the agent reading your repository, not by proposal length** — so it
+scales with repository size, and a rejected proposal is nearly as expensive as an accepted
+one unless you catch it early. That is what triage is for: a Haiku pass reads the proposal
+and the repository layout, decides whether it is actionable at all, and if not comments the
+single blocking question and removes the gate label. Cents instead of dollars, and the
+proposer gets a faster, more useful reply than a half-finished pull request.
+
+`max-turns` is the ceiling that actually bounds a runaway run. Set it deliberately rather
+than raising it reflexively.
 
 ## Security
 
