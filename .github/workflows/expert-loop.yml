@@ -36,6 +36,25 @@ on:
         required: false
         type: string
         default: ""
+      python-version:
+        description: >
+          If set, installs uv and this Python before drafting, creating `.venv` the way
+          `astral-sh/setup-uv` does. Leave empty for non-Python repositories and do the
+          work in `setup-command` instead.
+        required: false
+        type: string
+        default: ""
+      setup-command:
+        description: >
+          Shell run in the repository root before the agent starts, to install whatever
+          `test-command` needs (e.g. `uv pip install -e ".[dev]"`). Without it the agent
+          is dropped into a bare checkout: a drafting run once spent 46 turns and $2.70
+          discovering that pytest, uv and numpy were all absent, and never ran a test.
+          This step is the workflow's own, not the agent's, so it is not subject to the
+          agent's permission list.
+        required: false
+        type: string
+        default: ""
       allowed-tools:
         description: >
           Extra Claude Code tool permissions, comma-separated, appended to the ones the
@@ -271,6 +290,16 @@ jobs:
       # deep. The `:*` suffix is a prefix match, so `pytest -q` also permits
       # `pytest -q tests/test_split.py` — the agent has to be able to narrow to
       # one failing test while iterating, or it re-runs the whole suite every turn.
+      - uses: astral-sh/setup-uv@v5
+        if: inputs.python-version != ''
+        with:
+          enable-cache: true
+          python-version: ${{ inputs.python-version }}
+
+      - name: Prepare the environment
+        if: inputs.setup-command != ''
+        run: ${{ inputs.setup-command }}
+
       - name: Assemble the tool allow-list
         id: tools
         env:
@@ -280,6 +309,10 @@ jobs:
           # Read-only, and the drafting prompt asks for it: later comments on the
           # issue are often the maintainer answering the proposer's question.
           list="Bash(gh issue view:*)"
+          # Orientation commands. The agent reached for all of these while trying to
+          # work out why its test command was missing, and being refused each time is
+          # what turned a confused run into an expensive one. All read-only.
+          list="${list},Bash(ls:*),Bash(which:*),Bash(git status:*),Bash(git diff:*)"
           [ -n "$TEST_COMMAND" ] && list="${list},Bash(${TEST_COMMAND}:*)"
           [ -n "$EXTRA" ] && list="${list},${EXTRA}"
           echo "allowed=${list}" >> "$GITHUB_OUTPUT"
