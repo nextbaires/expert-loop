@@ -137,10 +137,16 @@ jobs:
                 "deny": ["Edit(**)", "Write(**)", "Bash(**)"]
               }
             }
+          # The single quotes around --json-schema are load-bearing. claude_args is
+          # tokenized quote-aware, not split on whitespace, so an unquoted schema
+          # ends at the first `"` — the CLI receives the single character `{` and
+          # dies with `--json-schema is not valid JSON: Expected '}'`, naming the
+          # schema rather than the quoting. The schema itself contains no single
+          # quotes, so wrapping it is safe.
           claude_args: |
             --model ${{ inputs.triage-model }}
             --max-turns 6
-            --json-schema {"type":"object","properties":{"implementable":{"type":"boolean"},"reason":{"type":"string"},"blocking_question":{"type":"string"}},"required":["implementable","reason","blocking_question"],"additionalProperties":false}
+            --json-schema '{"type":"object","properties":{"implementable":{"type":"boolean"},"reason":{"type":"string"},"blocking_question":{"type":"string"}},"required":["implementable","reason","blocking_question"],"additionalProperties":false}'
           prompt: |
             A domain expert in ${{ inputs.domain }} filed proposal
             #${{ github.event.issue.number }} on this repository. Read it with
