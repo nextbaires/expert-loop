@@ -314,7 +314,11 @@ jobs:
           # agent read the whole repository, ran the tests, then could not create the
           # file it had written without trouble the run before. Anything omitted from
           # this line is refused, and in CI a refusal is final — there is nobody to ask.
+          # The two commit tools are the whole point of use_commit_signing above; the
+          # action only installs them in that mode, and --allowedTools would exclude
+          # them regardless of being installed.
           list="Read,Glob,Grep,Edit,Write,MultiEdit,NotebookEdit,TodoWrite"
+          list="${list},mcp__github_file_ops__commit_files,mcp__github_file_ops__delete_files"
           list="${list},Bash(gh issue view:*)"
           # Orientation commands. The agent reached for all of these while trying to
           # work out why its test command was missing, and being refused each time is
@@ -331,6 +335,19 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.anthropic-api-key }}
           claude_code_oauth_token: ${{ secrets.claude-code-oauth-token }}
+          # Not for the signature. This is what decides *how* the agent commits, and
+          # the default left it with no way to commit at all: with signing off, the
+          # action expects plain `git add/commit/push` from Bash, and the deny-list
+          # below blocks `git push` on purpose. A drafting run wrote the module, wired
+          # it in, updated the tests and got the suite green — then ended, and the work
+          # died with the runner.
+          #
+          # With signing on, the action installs its github_file_ops MCP server and the
+          # commit goes through the API with the app token. No push, so the deny-list
+          # keeps its meaning, and the commits are verified.
+          # See src/mcp/install-mcp-server.ts: "Include file ops server when commit
+          # signing is enabled".
+          use_commit_signing: true
           branch_prefix: "proposal/"
           branch_name_template: "{{prefix}}{{entityNumber}}-{{description}}"
           # Untrusted issue text is the input here. Claude Code's own permission
