@@ -347,6 +347,23 @@ jobs:
           # keeps its meaning, and the commits are verified.
           # See src/mcp/install-mcp-server.ts: "Include file ops server when commit
           # signing is enabled".
+          # REQUIRED, and the most dangerous input in this file to get wrong.
+          #
+          # Passing `prompt` puts the action in automation mode, which never creates a
+          # branch — `branch_name` comes back empty and commits land on whatever branch
+          # is checked out. That is `main`. Branch creation happens only in tag mode,
+          # and for an issue event this input is what forces tag mode:
+          #
+          #   src/modes/detector.ts
+          #   // If track_progress is set for PR/issue events, force tag mode
+          #   if (context.inputs.trackProgress && isEntityContext(context)) {
+          #
+          # Without it, `use_commit_signing: true` below does not misdirect the commit
+          # so much as give a working commit path to a mode already aimed at main. That
+          # combination pushed an unreviewed agent commit straight to a public main,
+          # past the CODEOWNERS gate this whole design exists to enforce. Both inputs
+          # are load-bearing together; do not remove one and keep the other.
+          track_progress: true
           use_commit_signing: true
           branch_prefix: "proposal/"
           branch_name_template: "{{prefix}}{{entityNumber}}-{{description}}"
