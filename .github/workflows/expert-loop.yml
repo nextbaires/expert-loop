@@ -145,7 +145,14 @@ jobs:
           # quotes, so wrapping it is safe.
           claude_args: |
             --model ${{ inputs.triage-model }}
-            --max-turns 6
+            # 6 was too tight to reach a verdict. The prompt asks for the issue, the
+            # README and the layout of three directories, which is already several
+            # tool calls, and the run ended `error_max_turns` at 7 having decided
+            # nothing — the gate failing open-ended rather than saying no. A turn
+            # budget that cannot cover the reading the prompt asks for does not make
+            # triage cheaper, it makes it useless: the run is still billed and the
+            # proposal is still unjudged. Haiku at this depth cost about $0.07.
+            --max-turns 20
             --json-schema '{"type":"object","properties":{"implementable":{"type":"boolean"},"reason":{"type":"string"},"blocking_question":{"type":"string"}},"required":["implementable","reason","blocking_question"],"additionalProperties":false}'
           prompt: |
             A domain expert in ${{ inputs.domain }} filed proposal
