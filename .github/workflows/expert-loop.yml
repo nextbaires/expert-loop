@@ -471,7 +471,13 @@ jobs:
 
             6. ${{ inputs.test-command != '' && format('Run `{0}` and make it pass. If you cannot make it pass, do not open the pull request — comment on the issue explaining what failed.', inputs.test-command) || 'Run whatever test command this repository documents, and make it pass.' }}
 
-            Then open a pull request whose body has exactly these sections:
+            Do not try to open the pull request yourself, and do not run `gh pr create`
+            or `git push` — you have neither, and a run once spent its last fifteen turns
+            discovering that and then died over the turn limit. Commit your work to the
+            branch and stop. A later step opens the pull request from your commit.
+
+            Write the body it should use to `/tmp/pr-body.md`, with exactly these
+            sections:
 
             **What was proposed** — the contributor's idea in their own words, quoted. Do
             not paraphrase this section; a reviewer needs to compare intent against
@@ -531,6 +537,42 @@ jobs:
             | (.content | if type == "array" then map(.text? // "") | join(" ") else tostring end)
             | .[0:300]
           ' "$EXECUTION_FILE" || true
+
+      # The action commits to a branch and stops — its own docs say it "links back to a
+      # prefilled PR creation page", so nothing opens the pull request. Leaving that to
+      # the agent cost a whole run: it committed, then burned its remaining turns on
+      # `gh pr create --help` and WebFetch, both refused, and overran the turn ceiling.
+      # Doing it here is deterministic, free, and cannot fail for want of a permission.
+      - name: Open the pull request
+        if: steps.draft.outputs.branch_name != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.draft.outputs.branch_name }}
+          ISSUE: ${{ github.event.issue.number }}
+          TITLE: ${{ github.event.issue.title }}
+        run: |
+          if [ -n "$(gh pr list --head "$BRANCH" --json number --jq '.[0].number')" ]; then
+            echo "A pull request already exists for $BRANCH."
+            exit 0
+          fi
+          if [ -f /tmp/pr-body.md ]; then
+            body_args=(--body-file /tmp/pr-body.md)
+          else
+            # The agent committed but left no body. Still worth opening — a reviewer can
+            # read the diff and the commit message — but say plainly that the structured
+            # account the prompt asks for is missing, rather than dressing it up.
+            body_args=(--body "Drafted by the expert loop from #${ISSUE}.
+
+          The drafting run did not leave a pull request body, so the sections this project
+          asks for — what was proposed, what was implemented, the evidence, and what the
+          author was unsure about — are missing. Read the commit message and the diff, and
+          treat the absence as a reason for more scrutiny rather than less.")
+          fi
+          gh pr create \
+            --base "${GITHUB_REF_NAME}" \
+            --head "$BRANCH" \
+            --title "${TITLE#\[proposal\] }" \
+            "${body_args[@]}"
 
       - name: Label the pull request for domain review
         if: steps.draft.outputs.branch_name != ''
