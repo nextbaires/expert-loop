@@ -169,6 +169,20 @@ jobs:
                    "CLAUDE_CODE_OAUTH_TOKEN --repo <owner>/<repo> --app actions"
               exit 1
             fi
+            # A real token is on the order of 100-200 characters. Wildly more means the
+            # whole of `claude setup-token`'s output — banner, instructions, URL — was
+            # captured and had its newlines stripped, which turns a copy-paste mistake
+            # into one long plausible-looking single-line string that the shape check
+            # above happily passes. Seen for real at 2705 characters.
+            if [ "$chars" -gt 400 ] || [ "$chars" -lt 40 ]; then
+              echo "::error::CLAUDE_CODE_OAUTH_TOKEN is ${chars} characters, which is not" \
+                   "a token. Expect roughly 100-200. Too long usually means the whole" \
+                   "output of 'claude setup-token' was captured rather than just the" \
+                   "token; too short means it was truncated. Extract only the token:" \
+                   "claude setup-token | grep -oE 'sk-ant-[A-Za-z0-9_-]+' | tail -1 |" \
+                   "gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo <owner>/<repo> --app actions"
+              exit 1
+            fi
             echo "OAuth token present: ${chars} characters, single line."
           fi
 
@@ -305,6 +319,20 @@ jobs:
                    "wrapped terminal output. Re-set it with the wrap stripped:" \
                    "claude setup-token | tr -d '[:space:]' | gh secret set" \
                    "CLAUDE_CODE_OAUTH_TOKEN --repo <owner>/<repo> --app actions"
+              exit 1
+            fi
+            # A real token is on the order of 100-200 characters. Wildly more means the
+            # whole of `claude setup-token`'s output — banner, instructions, URL — was
+            # captured and had its newlines stripped, which turns a copy-paste mistake
+            # into one long plausible-looking single-line string that the shape check
+            # above happily passes. Seen for real at 2705 characters.
+            if [ "$chars" -gt 400 ] || [ "$chars" -lt 40 ]; then
+              echo "::error::CLAUDE_CODE_OAUTH_TOKEN is ${chars} characters, which is not" \
+                   "a token. Expect roughly 100-200. Too long usually means the whole" \
+                   "output of 'claude setup-token' was captured rather than just the" \
+                   "token; too short means it was truncated. Extract only the token:" \
+                   "claude setup-token | grep -oE 'sk-ant-[A-Za-z0-9_-]+' | tail -1 |" \
+                   "gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo <owner>/<repo> --app actions"
               exit 1
             fi
             echo "OAuth token present: ${chars} characters, single line."
