@@ -308,7 +308,14 @@ jobs:
         run: |
           # Read-only, and the drafting prompt asks for it: later comments on the
           # issue are often the maintainer answering the proposer's question.
-          list="Bash(gh issue view:*)"
+          # --allowedTools REPLACES the action's default allow-list rather than adding
+          # to it, so the file tools have to be named here or the agent loses them. An
+          # earlier version listed only Bash entries and silently revoked Write: the
+          # agent read the whole repository, ran the tests, then could not create the
+          # file it had written without trouble the run before. Anything omitted from
+          # this line is refused, and in CI a refusal is final — there is nobody to ask.
+          list="Read,Glob,Grep,Edit,Write,MultiEdit,NotebookEdit,TodoWrite"
+          list="${list},Bash(gh issue view:*)"
           # Orientation commands. The agent reached for all of these while trying to
           # work out why its test command was missing, and being refused each time is
           # what turned a confused run into an expensive one. All read-only.
