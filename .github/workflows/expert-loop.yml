@@ -363,6 +363,44 @@ jobs:
             #${{ github.event.issue.number }}. Drafted automatically — the domain judgement
             is theirs, any coding error is the loop's."
 
+      # Runs even on success, because the failure this exists for is a *successful*
+      # run that produced nothing: the agent finishes, the action reports success,
+      # branch_name comes back empty, and the log holds only the prompt echoed three
+      # times. Without this the only signal is `permission_denials_count`, a number
+      # with no list attached — you learn that ten things were refused and never
+      # which ten. Cheap, and it turns a guessing game into a reading task.
+      - name: Show what the draft run actually did
+        if: always()
+        env:
+          EXECUTION_FILE: ${{ steps.draft.outputs.execution_file }}
+          BRANCH_NAME: ${{ steps.draft.outputs.branch_name }}
+        run: |
+          echo "branch_name: '${BRANCH_NAME}'"
+          echo "--- working tree at the end of the run ---"
+          git status --porcelain || true
+          echo "--- commits not on ${GITHUB_REF_NAME} ---"
+          git log --oneline "origin/${GITHUB_REF_NAME}..HEAD" 2>/dev/null || true
+
+          if [ -z "$EXECUTION_FILE" ] || [ ! -f "$EXECUTION_FILE" ]; then
+            echo "No execution file was produced."
+            exit 0
+          fi
+
+          echo "--- tool calls ---"
+          jq -r '
+            .[]? | select(.type == "assistant") | .message.content[]?
+            | select(.type == "tool_use")
+            | "\(.name)  \((.input.command // .input.file_path // .input.path // "") | tostring | .[0:100])"
+          ' "$EXECUTION_FILE" || true
+
+          echo "--- refusals and tool errors ---"
+          jq -r '
+            .[]? | select(.type == "user") | .message.content[]?
+            | select(.type == "tool_result" and .is_error == true)
+            | (.content | if type == "array" then map(.text? // "") | join(" ") else tostring end)
+            | .[0:300]
+          ' "$EXECUTION_FILE" || true
+
       - name: Label the pull request for domain review
         if: steps.draft.outputs.branch_name != ''
         env:
