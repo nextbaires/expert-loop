@@ -393,6 +393,18 @@ jobs:
             ${{ github.event.issue.body }}
             ----- END PROPOSAL -----
 
+            Two things about this environment, because both have cost whole runs.
+
+            Use Read, Glob and Grep to look at files. Shelling out to `cat`, `sed` or
+            `find` is not permitted, and neither is chaining commands with `;` or `&&` —
+            a compound command is refused if any single part of it is, so
+            `cat a.py; echo ===; cat b.py` fails on the `echo`. Run one command per call.
+
+            Keep scratch work out of the repository. A previous run left a
+            `tests/test_zz_scratch.py` behind, which would have shipped in the pull
+            request. Use `/tmp` for probes, and delete anything you added to the working
+            tree that is not part of the change.
+
             Work in this order.
 
             1. Learn the repository's conventions before writing anything. Read the README,
