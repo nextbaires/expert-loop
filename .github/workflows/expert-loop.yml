@@ -151,6 +151,27 @@ jobs:
             exit 1
           fi
 
+          # A token pasted out of wrapped terminal output carries the wrap with it.
+          # The action rejects it in about 70ms with no cost and no turns, and hides
+          # the reason behind "full output hidden for security" — so the run just looks
+          # inexplicably broken. This cost four rounds of guessing before anyone read
+          # the real message. Check it here, and say exactly what is wrong without
+          # printing the secret: character counts are safe, the value is not.
+          if [ -n "$OAUTH_TOKEN" ]; then
+            breaks=$(printf '%s' "$OAUTH_TOKEN" | tr -cd '\n' | wc -c | tr -d ' ')
+            chars=$(printf '%s' "$OAUTH_TOKEN" | wc -c | tr -d ' ')
+            if [ "$breaks" -ne 0 ]; then
+              echo "::error::CLAUDE_CODE_OAUTH_TOKEN contains a line break" \
+                   "(${chars} characters across $((breaks + 1)) lines), so every request" \
+                   "is rejected before it is sent. It was almost certainly copied from" \
+                   "wrapped terminal output. Re-set it with the wrap stripped:" \
+                   "claude setup-token | tr -d '[:space:]' | gh secret set" \
+                   "CLAUDE_CODE_OAUTH_TOKEN --repo <owner>/<repo> --app actions"
+              exit 1
+            fi
+            echo "OAuth token present: ${chars} characters, single line."
+          fi
+
       - uses: actions/checkout@v4
 
       - name: Assess feasibility
@@ -266,6 +287,27 @@ jobs:
             echo "::error::Supply either claude-code-oauth-token (Claude subscription," \
                  "generate with 'claude setup-token') or anthropic-api-key (pay per token)."
             exit 1
+          fi
+
+          # A token pasted out of wrapped terminal output carries the wrap with it.
+          # The action rejects it in about 70ms with no cost and no turns, and hides
+          # the reason behind "full output hidden for security" — so the run just looks
+          # inexplicably broken. This cost four rounds of guessing before anyone read
+          # the real message. Check it here, and say exactly what is wrong without
+          # printing the secret: character counts are safe, the value is not.
+          if [ -n "$OAUTH_TOKEN" ]; then
+            breaks=$(printf '%s' "$OAUTH_TOKEN" | tr -cd '\n' | wc -c | tr -d ' ')
+            chars=$(printf '%s' "$OAUTH_TOKEN" | wc -c | tr -d ' ')
+            if [ "$breaks" -ne 0 ]; then
+              echo "::error::CLAUDE_CODE_OAUTH_TOKEN contains a line break" \
+                   "(${chars} characters across $((breaks + 1)) lines), so every request" \
+                   "is rejected before it is sent. It was almost certainly copied from" \
+                   "wrapped terminal output. Re-set it with the wrap stripped:" \
+                   "claude setup-token | tr -d '[:space:]' | gh secret set" \
+                   "CLAUDE_CODE_OAUTH_TOKEN --repo <owner>/<repo> --app actions"
+              exit 1
+            fi
+            echo "OAuth token present: ${chars} characters, single line."
           fi
 
       - name: Check out the repository
